@@ -216,7 +216,7 @@ export class ForkBlockchain implements HardhatBlockchainInterface {
         topics: filterParams.normalizedTopics,
       });
       return remoteLogs
-        .map((log, index) => toRpcLogOutput(log, index))
+        .map(toRpcLogOutput)
         .concat(localLogs);
     }
     return this._data.getLogs(filterParams);
