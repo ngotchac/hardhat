@@ -125,7 +125,7 @@ describe("HardhatNode", () => {
     describe("basic tests", () => {
       it("can mine an empty block", async () => {
         const beforeBlock = await node.getLatestBlockNumber();
-        await node.mineBlock();
+        await node.mineBlock(false);
         const currentBlock = await node.getLatestBlockNumber();
         assert.equal(currentBlock.toString(), beforeBlock.addn(1).toString());
       });
@@ -139,7 +139,7 @@ describe("HardhatNode", () => {
           value: 1234,
         });
         await node.sendTransaction(tx);
-        await node.mineBlock();
+        await node.mineBlock(false);
 
         await assertTransactionsWereMined([tx]);
         const balance = await node.getAccountBalance(EMPTY_ACCOUNT_ADDRESS);
@@ -163,7 +163,7 @@ describe("HardhatNode", () => {
         });
         await node.sendTransaction(tx1);
         await node.sendTransaction(tx2);
-        await node.mineBlock();
+        await node.mineBlock(false);
 
         await assertTransactionsWereMined([tx1, tx2]);
         const balance = await node.getAccountBalance(EMPTY_ACCOUNT_ADDRESS);
@@ -187,7 +187,7 @@ describe("HardhatNode", () => {
         });
         await node.sendTransaction(tx1);
         await node.sendTransaction(tx2);
-        await node.mineBlock();
+        await node.mineBlock(false);
 
         await assertTransactionsWereMined([tx1, tx2]);
         const balance = await node.getAccountBalance(EMPTY_ACCOUNT_ADDRESS);
@@ -207,7 +207,7 @@ describe("HardhatNode", () => {
         const pendingTransactionsBefore = await node.getPendingTransactions();
         assert.lengthOf(pendingTransactionsBefore, 1);
 
-        await node.mineBlock();
+        await node.mineBlock(false);
 
         const pendingTransactionsAfter = await node.getPendingTransactions();
         assert.lengthOf(pendingTransactionsAfter, 0);
@@ -243,7 +243,7 @@ describe("HardhatNode", () => {
           [tx1, expensiveTx2, tx3].map((tx) => tx.raw)
         );
 
-        await node.mineBlock();
+        await node.mineBlock(false);
         await assertTransactionsWereMined([tx1, tx3]);
 
         const pendingTransactionsAfter = await node.getPendingTransactions();
@@ -270,7 +270,7 @@ describe("HardhatNode", () => {
         });
         await node.sendTransaction(tx1);
         await node.sendTransaction(tx2);
-        await node.mineBlock();
+        await node.mineBlock(false);
 
         const tx1Receipt = await node.getTransactionReceipt(tx1.hash());
         const tx2Receipt = await node.getTransactionReceipt(tx2.hash());
@@ -310,7 +310,7 @@ describe("HardhatNode", () => {
           value: 1234,
         });
         await node.sendTransaction(tx);
-        await node.mineBlock();
+        await node.mineBlock(false);
 
         const minerBalance = await node.getAccountBalance(miner);
         assert.equal(
@@ -337,7 +337,7 @@ describe("HardhatNode", () => {
         });
         await node.sendTransaction(tx1);
         await node.sendTransaction(tx2);
-        await node.mineBlock();
+        await node.mineBlock(false);
 
         await assertTransactionsWereMined([tx1]);
         assert.isUndefined(await node.getTransactionReceipt(tx2.hash()));
@@ -359,7 +359,7 @@ describe("HardhatNode", () => {
         });
         await node.sendTransaction(tx1);
         await node.sendTransaction(tx2);
-        await node.mineBlock();
+        await node.mineBlock(false);
 
         await assertTransactionsWereMined([tx1]);
         assert.isUndefined(await node.getTransactionReceipt(tx2.hash()));
@@ -383,7 +383,7 @@ describe("HardhatNode", () => {
         });
         await node.sendTransaction(tx1);
         await node.sendTransaction(tx2);
-        await node.mineBlock();
+        await node.mineBlock(false);
 
         await assertTransactionsWereMined([tx1, tx2]);
       });
@@ -414,7 +414,7 @@ describe("HardhatNode", () => {
         await node.sendTransaction(tx1);
         await node.sendTransaction(tx2);
         await node.sendTransaction(tx3);
-        await node.mineBlock();
+        await node.mineBlock(false);
 
         await assertTransactionsWereMined([tx1, tx3]);
         assert.isUndefined(await node.getTransactionReceipt(tx2.hash()));
@@ -436,7 +436,7 @@ describe("HardhatNode", () => {
         clock.tick(15_000);
         const now = getCurrentTimestamp();
 
-        await node.mineBlock();
+        await node.mineBlock(false);
         const block = await node.getLatestBlock();
 
         assert.equal(block.header.timestamp.toNumber(), now);
@@ -446,7 +446,7 @@ describe("HardhatNode", () => {
         const firstBlock = await node.getLatestBlock();
         const firstBlockTimestamp = firstBlock.header.timestamp.toNumber();
 
-        await node.mineBlock();
+        await node.mineBlock(false);
         const latestBlock = await node.getLatestBlock();
         const latestBlockTimestamp = latestBlock.header.timestamp.toNumber();
 
@@ -457,11 +457,11 @@ describe("HardhatNode", () => {
         const firstBlock = await node.getLatestBlock();
         const firstBlockTimestamp = firstBlock.header.timestamp.toNumber();
 
-        await node.mineBlock();
+        await node.mineBlock(false);
         const secondBlock = await node.getLatestBlock();
         const secondBlockTimestamp = secondBlock.header.timestamp.toNumber();
 
-        await node.mineBlock();
+        await node.mineBlock(false);
         const thirdBlock = await node.getLatestBlock();
         const thirdBlockTimestamp = thirdBlock.header.timestamp.toNumber();
 
@@ -473,7 +473,7 @@ describe("HardhatNode", () => {
         const now = getCurrentTimestamp();
         const timestamp = new BN(now).addn(30);
         node.setNextBlockTimestamp(timestamp);
-        await node.mineBlock();
+        await node.mineBlock(false);
 
         const block = await node.getLatestBlock();
         const blockTimestamp = block.header.timestamp.toNumber();
@@ -484,10 +484,10 @@ describe("HardhatNode", () => {
         const now = getCurrentTimestamp();
         const timestamp = new BN(now).addn(30);
         node.setNextBlockTimestamp(timestamp);
-        await node.mineBlock();
+        await node.mineBlock(false);
 
         clock.tick(3_000);
-        await node.mineBlock();
+        await node.mineBlock(false);
 
         const block = await node.getLatestBlock();
         const blockTimestamp = block.header.timestamp.toNumber();
@@ -499,7 +499,7 @@ describe("HardhatNode", () => {
         const presetTimestamp = new BN(now).addn(30);
         node.setNextBlockTimestamp(presetTimestamp);
         const timestamp = new BN(now).addn(60);
-        await node.mineBlock(timestamp);
+        await node.mineBlock(false, timestamp);
 
         const block = await node.getLatestBlock();
         const blockTimestamp = block.header.timestamp.toNumber();
@@ -509,7 +509,7 @@ describe("HardhatNode", () => {
       it("mines a block with correct timestamp after time increase", async () => {
         const now = getCurrentTimestamp();
         node.increaseTime(new BN(30));
-        await node.mineBlock();
+        await node.mineBlock(false);
 
         const block = await node.getLatestBlock();
         const blockTimestamp = block.header.timestamp.toNumber();
@@ -523,7 +523,7 @@ describe("HardhatNode", () => {
             const timestamp = new BN(now).addn(offset);
             node.increaseTime(new BN(30));
             node.setNextBlockTimestamp(timestamp);
-            await node.mineBlock();
+            await node.mineBlock(false);
 
             const block = await node.getLatestBlock();
             const blockTimestamp = block.header.timestamp.toNumber();
@@ -535,10 +535,10 @@ describe("HardhatNode", () => {
             const timestamp = new BN(now).addn(offset);
             node.increaseTime(new BN(30));
             node.setNextBlockTimestamp(timestamp);
-            await node.mineBlock();
+            await node.mineBlock(false);
 
             clock.tick(3_000);
-            await node.mineBlock();
+            await node.mineBlock(false);
 
             const block = await node.getLatestBlock();
             const blockTimestamp = block.header.timestamp.toNumber();
@@ -681,7 +681,8 @@ describe("HardhatNode", () => {
         await forkedNode["_vm"].blockchain.putBlock(modifiedBlock);
         await forkedNode["_saveBlockAsSuccessfullyRun"](
           modifiedBlock,
-          afterBlockEvent
+          afterBlockEvent,
+          false
         );
 
         const newBlock = await forkedNode.getBlockByNumber(new BN(blockToRun));

@@ -137,7 +137,7 @@ export class EvmModule {
         );
       }
     }
-    const result = await this._node.mineBlock(new BN(timestamp));
+    const result = await this._node.mineBlock(true, new BN(timestamp));
 
     await this._logBlock(result);
 

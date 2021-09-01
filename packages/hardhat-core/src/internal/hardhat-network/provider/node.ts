@@ -421,7 +421,10 @@ Hardhat Network's forking functionality only works with blocks from at least spu
     return this._mineTransaction(tx);
   }
 
-  public async mineBlock(timestamp?: BN): Promise<MineBlockResult> {
+  public async mineBlock(
+    shouldEmitEvents: boolean,
+    timestamp?: BN
+  ): Promise<MineBlockResult> {
     const [blockTimestamp, offsetShouldChange, newOffset] =
       this._calculateTimestampAndOffset(timestamp);
     const needsTimestampIncrease =
@@ -446,7 +449,11 @@ Hardhat Network's forking functionality only works with blocks from at least spu
       throw new TransactionExecutionError(err);
     }
 
-    await this._saveBlockAsSuccessfullyRun(result.block, result.blockResult);
+    await this._saveBlockAsSuccessfullyRun(
+      result.block,
+      result.blockResult,
+      shouldEmitEvents
+    );
 
     if (needsTimestampIncrease) {
       this.increaseTime(new BN(1));
@@ -1408,7 +1415,7 @@ Hardhat Network's forking functionality only works with blocks from at least spu
     tx: TypedTransaction
   ): Promise<MineBlockResult> {
     await this._addPendingTransaction(tx);
-    return this.mineBlock();
+    return this.mineBlock(true);
   }
 
   private async _mineTransactionAndPending(
@@ -1440,12 +1447,12 @@ Hardhat Network's forking functionality only works with blocks from at least spu
           "Failed to mine transaction for unknown reason, this should never happen"
         );
       }
-      results.push(await this.mineBlock());
+      results.push(await this.mineBlock(true));
       txReceipt = await this.getTransactionReceipt(txHash);
     } while (txReceipt === undefined);
 
     while (this._txPool.hasPendingTransactions()) {
-      results.push(await this.mineBlock());
+      results.push(await this.mineBlock(true));
     }
 
     return results;
@@ -1844,7 +1851,8 @@ Hardhat Network's forking functionality only works with blocks from at least spu
    */
   private async _saveBlockAsSuccessfullyRun(
     block: Block,
-    runBlockResult: RunBlockResult
+    runBlockResult: RunBlockResult,
+    shouldEmitEvents: boolean
   ) {
     const receipts = getRpcReceiptOutputsFromLocalBlockExecution(
       block,
@@ -1854,60 +1862,62 @@ Hardhat Network's forking functionality only works with blocks from at least spu
 
     this._blockchain.addTransactionReceipts(receipts);
 
-    const td = await this.getBlockTotalDifficulty(block);
-    const rpcLogs: RpcLogOutput[] = [];
-    for (const receipt of receipts) {
-      rpcLogs.push(...receipt.logs);
-    }
-
-    this._filters.forEach((filter, key) => {
-      if (filter.deadline.valueOf() < new Date().valueOf()) {
-        this._filters.delete(key);
+    if (shouldEmitEvents) {
+      const td = await this.getBlockTotalDifficulty(block);
+      const rpcLogs: RpcLogOutput[] = [];
+      for (const receipt of receipts) {
+        rpcLogs.push(...receipt.logs);
       }
 
-      switch (filter.type) {
-        case Type.BLOCK_SUBSCRIPTION:
-          const hash = block.hash();
-          if (filter.subscription) {
-            this._emitEthEvent(
-              filter.id,
-              getRpcBlock(
-                block,
-                td,
-                shouldShowTransactionTypeForHardfork(this._vm._common),
-                false
-              )
-            );
-            return;
-          }
+      this._filters.forEach((filter, key) => {
+        if (filter.deadline.valueOf() < new Date().valueOf()) {
+          this._filters.delete(key);
+        }
 
-          filter.hashes.push(bufferToHex(hash));
-          break;
-        case Type.LOGS_SUBSCRIPTION:
-          if (
-            bloomFilter(
-              new Bloom(block.header.bloom),
-              filter.criteria!.addresses,
-              filter.criteria!.normalizedTopics
-            )
-          ) {
-            const logs = filterLogs(rpcLogs, filter.criteria!);
-            if (logs.length === 0) {
-              return;
-            }
-
+        switch (filter.type) {
+          case Type.BLOCK_SUBSCRIPTION:
+            const hash = block.hash();
             if (filter.subscription) {
-              logs.forEach((rpcLog) => {
-                this._emitEthEvent(filter.id, rpcLog);
-              });
+              this._emitEthEvent(
+                filter.id,
+                getRpcBlock(
+                  block,
+                  td,
+                  shouldShowTransactionTypeForHardfork(this._vm._common),
+                  false
+                )
+              );
               return;
             }
 
-            filter.logs.push(...logs);
-          }
-          break;
-      }
-    });
+            filter.hashes.push(bufferToHex(hash));
+            break;
+          case Type.LOGS_SUBSCRIPTION:
+            if (
+              bloomFilter(
+                new Bloom(block.header.bloom),
+                filter.criteria!.addresses,
+                filter.criteria!.normalizedTopics
+              )
+            ) {
+              const logs = filterLogs(rpcLogs, filter.criteria!);
+              if (logs.length === 0) {
+                return;
+              }
+
+              if (filter.subscription) {
+                logs.forEach((rpcLog) => {
+                  this._emitEthEvent(filter.id, rpcLog);
+                });
+                return;
+              }
+
+              filter.logs.push(...logs);
+            }
+            break;
+        }
+      });
+    }
   }
 
   private async _timestampClashesWithPreviousBlockOne(
@@ -1951,7 +1961,7 @@ Hardhat Network's forking functionality only works with blocks from at least spu
   private async _runInPendingBlockContext<T>(action: () => Promise<T>) {
     const snapshotId = await this.takeSnapshot();
     try {
-      await this.mineBlock();
+      await this.mineBlock(false);
       return await action();
     } finally {
       await this.revertToSnapshot(snapshotId);
