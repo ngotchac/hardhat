@@ -195,7 +195,7 @@ describe("HardhatNode", () => {
         });
         await node.sendTransaction(tx1);
         await node.sendTransaction(tx2);
-        await node.mineBlock();
+        await node.mineBlock(false);
 
         const txReceipt1 = await node.getTransactionReceipt(tx1.hash());
         const txReceipt2 = await node.getTransactionReceipt(tx2.hash());
